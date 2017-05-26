@@ -1,0 +1,32 @@
+{
+  "name": "fitbit-hapi-api",
+  "version": "1.0.0",
+  "description": "API for communicating with Fitbit",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NFabrizio/fitbit-hapi-api.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/NFabrizio/fitbit-hapi-api/issues"
+  },
+  "homepage": "https://github.com/NFabrizio/fitbit-hapi-api#readme",
+  "dependencies": {
+    "crypto": "0.0.3",
+    "fitbit-node": "^2.0.5",
+    "hapi": "^16.1.1",
+    "mongoose": "^4.10.2",
+    "q": "^1.5.0"
+  },
+  "engines": {
+    "node": "^4.2.1"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}
