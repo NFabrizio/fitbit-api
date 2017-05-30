@@ -1,6 +1,18 @@
 const Hapi = require ('hapi');
 const Fitbit = require('fitbit-node');
+const mongoose = require('mongoose');
 const Config = require('./config/config');
+
+mongoose.connect('mongodb://localhost/fitbitApi');
+const db = mongoose.connection;
+
+const userSchema = mongoose.Schema({
+  userId: String,
+  accessToken: String,
+  refreshToken: String
+});
+
+const User = mongoose.model('User', userSchema);
 
 const client = new Fitbit(Config.fitbit_creds.clientId, Config.fitbit_creds.clientSecret);
 const redirect_uri = 'http://localhost:8080/fitbit_oauth_callback';
@@ -30,6 +42,7 @@ server.route([
     handler: (request, reply) => {
       client.getAccessToken(request.query.code, redirect_uri)
       .then((result) => {
+        updateUser(result.user_id, result.access_token, result.refresh_token);
         client.get('/profile.json', result.access_token)
         .then((profile) => {
           reply(profile)
@@ -38,6 +51,19 @@ server.route([
     }
   }
 ]);
+
+const updateUser = (userId, accessToken, refreshToken) => {
+  const newUserInfo = {
+    userId,
+    accessToken,
+    refreshToken
+  };
+  const newUser = new User(newUserInfo);
+
+  User.update({userId: userId}, newUser, {upsert:true}, (err) => {
+    return;
+  });
+};
 
 server.start((err) => {
   console.log('Hapi is listening on http://localhost:8080');
