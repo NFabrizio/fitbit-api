@@ -25,15 +25,28 @@ server.route([
   {
     method: "GET",
     path: "/",
-    handler: (requst, reply) => {
+    handler: (request, reply) => {
       reply('Hello world from Hapi');
     }
   },
   {
     method: "GET",
     path: "/fitbit",
-    handler: (requst, reply) => {
+    handler: (request, reply) => {
       reply().redirect(client.getAuthorizeUrl(scope, redirect_uri));
+    }
+  },
+  {
+    method: "GET",
+    path: "/api/v1/users/{fitbitId}",
+    handler: (request, reply) => {
+      const result = User.findOne({ userId: request.params.fitbitId });
+      result.exec((err, user) => {
+        client.get('profile.json', user.accessToken)
+        .then((profile) => {
+          reply(profile);
+        });
+      });
     }
   },
   {
@@ -45,7 +58,7 @@ server.route([
         updateUser(result.user_id, result.access_token, result.refresh_token);
         client.get('/profile.json', result.access_token)
         .then((profile) => {
-          reply(profile)
+          reply().redirect(`/api/v1/users/${result.user_id}`);
         });
       });
     }
