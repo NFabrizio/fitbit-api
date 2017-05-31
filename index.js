@@ -38,6 +38,49 @@ server.route([
   },
   {
     method: "GET",
+    config: { json: { space: 2 } },
+    path: "/api/v1/users",
+    handler: (request, reply) => {
+      const result = User.find();
+      result.exec((err, users) => {
+        const userList = [];
+        users.forEach((userDoc) => {
+          const user = userDoc.toObject();
+          user._links = [
+            {
+              rel: 'self',
+              href: `http://localhost:8080/api/v1/users/${user.userId}`,
+              method: 'GET'
+            },
+            {
+              rel: 'self',
+              href: `http://localhost:8080/api/v1/users/${user.userId}`,
+              method: 'DELETE'
+            },
+            {
+              rel: 'summary',
+              href: `http://localhost:8080/api/v1/users/${user.userId}/activities/summary`,
+              method: 'GET'
+            },
+            {
+              rel: 'activities',
+              href: `http://localhost:8080/api/v1/users/${user.userId}/activities`,
+              method: 'GET'
+            },
+            {
+              rel: 'activities',
+              href: `http://localhost:8080/api/v1/users/${user.userId}/activities`,
+              method: 'POST'
+            }
+          ];
+          userList.push(user);
+        });
+        reply(userList);
+      });
+    }
+  },
+  {
+    method: "GET",
     path: "/api/v1/users/{fitbitId}",
     handler: (request, reply) => {
       const result = User.findOne({ userId: request.params.fitbitId });
@@ -50,6 +93,15 @@ server.route([
     }
   },
   {
+    method: "DELETE",
+    path: "/api/v1/users/{fitbitId}",
+    handler: (request, reply) => {
+      User.findOneAndRemove({userId: request.params.fitbitId}, (err, response) => {
+        reply().code(204);
+      });
+    }
+  },
+  {
     method: "GET",
     path: "/fitbit_oauth_callback",
     handler: (request, reply) => {
@@ -57,7 +109,7 @@ server.route([
       .then((result) => {
         updateUser(result.user_id, result.access_token, result.refresh_token);
         client.get('/profile.json', result.access_token)
-        .then((profile) => {
+        .then((results) => {
           reply().redirect(`/api/v1/users/${result.user_id}`);
         });
       });
