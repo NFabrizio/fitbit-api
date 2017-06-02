@@ -1,3 +1,5 @@
+'use strict';
+
 const Hapi = require ('hapi');
 const Fitbit = require('fitbit-node');
 const mongoose = require('mongoose');
@@ -9,6 +11,8 @@ const db = mongoose.connection;
 const userSchema = mongoose.Schema({
   userId: String,
   accessToken: String,
+  createdAt: Date,
+  expiresIn: Number,
   refreshToken: String
 });
 
@@ -85,7 +89,19 @@ server.route([
     handler: (request, reply) => {
       const result = User.findOne({ userId: request.params.fitbitId });
       result.exec((err, user) => {
-        client.get('profile.json', user.accessToken)
+        let userAccessToken = '';
+
+        if(tokenRefresh(user)) {
+          client.refreshAccessToken(user.accessToken, user.refreshToken)
+          .then((result) => {
+            updateUser(result.user_id, result.access_token, result.refresh_token, result.expires_in);
+            userAccessToken = result.access_token;
+          });
+        } else {
+          userAccessToken = user.accessToken;
+        }
+
+        client.get('/profile.json', userAccessToken)
         .then((profile) => {
           reply(profile);
         });
@@ -107,20 +123,19 @@ server.route([
     handler: (request, reply) => {
       client.getAccessToken(request.query.code, redirect_uri)
       .then((result) => {
-        updateUser(result.user_id, result.access_token, result.refresh_token);
-        client.get('/profile.json', result.access_token)
-        .then((results) => {
-          reply().redirect(`/api/v1/users/${result.user_id}`);
-        });
+        updateUser(result.user_id, result.access_token, result.refresh_token, result.expires_in);
+        reply().redirect(`/api/v1/users/${result.user_id}`);
       });
     }
   }
 ]);
 
-const updateUser = (userId, accessToken, refreshToken) => {
+const updateUser = (userId, accessToken, refreshToken, expiresIn) => {
   const newUserInfo = {
     userId,
     accessToken,
+    createdAt: new Date(),
+    expiresIn,
     refreshToken
   };
   const newUser = new User(newUserInfo);
@@ -128,6 +143,12 @@ const updateUser = (userId, accessToken, refreshToken) => {
   User.update({userId: userId}, newUser, {upsert:true}, (err) => {
     return;
   });
+};
+
+const tokenRefresh = (userData) => {
+  const now = new Date();
+  return (now - userData.createdAt) < userData.expiresIn;
+  // client.refreshAccessToken();
 };
 
 server.start((err) => {
