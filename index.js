@@ -96,15 +96,24 @@ server.route([
           .then((result) => {
             updateUser(result.user_id, result.access_token, result.refresh_token, result.expires_in);
             userAccessToken = result.access_token;
+
+            client.get('/profile.json', userAccessToken)
+            .then((profile) => {
+              reply(profile);
+            });
+          })
+          .catch((error) => {
+            console.log('error:');
+            console.log(error.context.errors);
           });
         } else {
           userAccessToken = user.accessToken;
-        }
 
-        client.get('/profile.json', userAccessToken)
-        .then((profile) => {
-          reply(profile);
-        });
+          client.get('/profile.json', userAccessToken)
+          .then((profile) => {
+            reply(profile);
+          });
+        }
       });
     }
   },
@@ -138,17 +147,19 @@ const updateUser = (userId, accessToken, refreshToken, expiresIn) => {
     expiresIn,
     refreshToken
   };
-  const newUser = new User(newUserInfo);
+  // const newUser = new User(newUserInfo);
 
-  User.update({userId: userId}, newUser, {upsert:true}, (err) => {
-    return;
+  User.update({userId: userId}, newUserInfo, {upsert:true}, (err) => {
+    if(err) {
+      console.log('error updating user:');
+      console.log(err);
+    }
   });
 };
 
 const tokenRefresh = (userData) => {
   const now = new Date();
-  return (now - userData.createdAt) < userData.expiresIn;
-  // client.refreshAccessToken();
+  return (now - userData.createdAt) > userData.expiresIn;
 };
 
 server.start((err) => {
