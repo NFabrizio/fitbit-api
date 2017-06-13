@@ -42,6 +42,17 @@ server.route([
   },
   {
     method: "GET",
+    path: "/fitbit_oauth_callback",
+    handler: (request, reply) => {
+      client.getAccessToken(request.query.code, redirect_uri)
+      .then((result) => {
+        updateUser(result.user_id, result.access_token, result.refresh_token, result.expires_in);
+        reply().redirect(`/api/v1/users/${result.user_id}`);
+      });
+    }
+  },
+  {
+    method: "GET",
     config: { json: { space: 2 } },
     path: "/api/v1/users",
     handler: (request, reply) => {
@@ -49,7 +60,10 @@ server.route([
       result.exec((err, users) => {
         const userList = [];
         users.forEach((userDoc) => {
+          // Convert each user to a JS object since it comes in as a Mongo document
           const user = userDoc.toObject();
+
+          // Explain the different user endpoints
           user._links = [
             {
               rel: 'self',
@@ -128,16 +142,126 @@ server.route([
   },
   {
     method: "GET",
-    path: "/fitbit_oauth_callback",
+    path: "/api/v1/users/{fitbitId}/activities/summary",
+    config: { json: { space: 2 } },
     handler: (request, reply) => {
-      client.getAccessToken(request.query.code, redirect_uri)
-      .then((result) => {
-        updateUser(result.user_id, result.access_token, result.refresh_token, result.expires_in);
-        reply().redirect(`/api/v1/users/${result.user_id}`);
+      const result = User.findOne({userId: request.params.fitbitId});
+      result.exec((err, user) => {
+        if (err) {
+          return err;
+        }
+
+        if (!user) {
+          reply().redirect('/fitbit');
+        }
+
+        const requestDate = getFitbitDate(request.query.date);
+        const requestUrl = `/activities/date/${requestDate}.json`;
+        client.get(requestUrl, user.accessToken)
+        .then((results) => {
+          reply(results[0].summary);
+        });
+      });
+    }
+  },
+  {
+    method: "GET",
+    path: "/api/v1/users/{fitbitId}/activities",
+    config: { json: { space: 2 } },
+    handler: (request, reply) => {
+      const result = User.findOne({userId: request.params.fitbitId});
+      result.exec((err, user) => {
+        if (err) {
+          return err;
+        }
+
+        if (!user) {
+          reply().redirect('/fitbit');
+        }
+
+        const requestDate = getFitbitDate(request.query.date);
+        const queryString = `?afterDate=${requestDate}&sort=asc&offset=0&limit=50`;
+        const requestUrl = `/activities/list.json${queryString}`;
+
+        client.get(requestUrl, user.accessToken)
+        .then((results) => {
+          reply(results[0].activities);
+        });
+      });
+    }
+  },
+  {
+    method: "POST",
+    path: "/api/v1/users/{fitbitId}/activities",
+    config: { json: { space: 2 } },
+    handler: (request, reply) => {
+      const result = User.findOne({userId: request.params.fitbitId});
+      result.exec((err, user) => {
+        if (err) {
+          return err;
+        }
+
+        if (!user) {
+          reply().redirect('/fitbit');
+        }
+
+        const requestDate = getFitbitDate(request.query.date);
+        const activity = {
+          activityName: 'Cycling',
+          manualCalories: 300,
+          startTime: '09:00:00',
+          durationMillis: 1000*60*30,
+          date: requestDate
+        };
+        const requestUrl = '/activities.json';
+
+        client.post(requestUrl, user.accessToken, activity)
+        .then((results) => {
+          reply(results);
+        });
+      });
+    }
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/users/{fitbitId}/activities/{activityId}",
+    handler: (request, reply) => {
+      const result = User.findOne({userId: request.params.fitbitId});
+      result.exec((err, user) => {
+        if (err) {
+          return err;
+        }
+
+        if (!user) {
+          reply().redirect('/fitbit');
+        }
+
+        const requestUrl = `/activities/${request.params.activityid}.json`;
+
+        client.delete(requestUrl, user.accessToken)
+        .then((results, response) => {
+          console.log(response);
+          reply(). code(204);
+        });
       });
     }
   }
 ]);
+
+const getFitbitDate = (requestDate) => {
+  if (requestDate) {
+    return requestDate;
+  }
+
+  const d = new Date();
+  const dateArray = [d.getFullYear(), d.getMonth(), d.getDate()];
+  return dateArray.join('-');
+};
+
+const tokenRefresh = (userData) => {
+  const now = new Date();
+  return (now - userData.createdAt) > userData.expiresIn;
+};
 
 const updateUser = (userId, accessToken, refreshToken, expiresIn) => {
   const newUserInfo = {
@@ -155,11 +279,6 @@ const updateUser = (userId, accessToken, refreshToken, expiresIn) => {
       console.log(err);
     }
   });
-};
-
-const tokenRefresh = (userData) => {
-  const now = new Date();
-  return (now - userData.createdAt) > userData.expiresIn;
 };
 
 server.start((err) => {
