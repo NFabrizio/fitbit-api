@@ -103,31 +103,10 @@ server.route([
     handler: (request, reply) => {
       const result = User.findOne({ userId: request.params.fitbitId });
       result.exec((err, user) => {
-        let userAccessToken = '';
-
-        if(tokenRefresh(user)) {
-          client.refreshAccessToken(user.accessToken, user.refreshToken)
-          .then((result) => {
-            updateUser(result.user_id, result.access_token, result.refresh_token, result.expires_in);
-            userAccessToken = result.access_token;
-
-            client.get('/profile.json', userAccessToken)
-            .then((profile) => {
-              reply(profile);
-            });
-          })
-          .catch((error) => {
-            console.log('error:');
-            console.log(error.context.errors);
-          });
-        } else {
-          userAccessToken = user.accessToken;
-
-          client.get('/profile.json', userAccessToken)
-          .then((profile) => {
-            reply(profile);
-          });
-        }
+        getFitbit('/profile.json', user)
+        .then((result) => {
+          reply(result);
+        });
       });
     }
   },
@@ -248,6 +227,42 @@ server.route([
   }
 ]);
 
+const getFitbit = (requestUrl, user) => {
+  if (tokenRefreshCheck(user)) {
+    return new Promise((resolve, reject) => {
+      refreshToken(user)
+      .then((result) => {
+        client.get(requestUrl, result)
+        .then((results) => {
+          if (results[0].errors) {
+            reject(results[0].errors);
+          }
+          resolve(results);
+        })
+        .catch((error) => {
+          reject(error);
+        });
+      }, (err) => {
+        console.log(err);
+        return err;
+      });
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    client.get(requestUrl, user.accessToken)
+    .then((results) => {
+      if (results[0].errors) {
+        reject(results[0].errors);
+      }
+      resolve(results);
+    })
+    .catch((error) => {
+      reject(error);
+    });
+  });
+};
+
 const getFitbitDate = (requestDate) => {
   if (requestDate) {
     return requestDate;
@@ -258,7 +273,22 @@ const getFitbitDate = (requestDate) => {
   return dateArray.join('-');
 };
 
-const tokenRefresh = (userData) => {
+const refreshToken = (user) => {
+  return new Promise((resolve, reject) => {
+    client.refreshAccessToken(user.accessToken, user.refreshToken)
+    .then((result) => {
+      updateUser(result.user_id, result.access_token, result.refresh_token, result.expires_in);
+      resolve(result.access_token);
+    })
+    .catch((error) => {
+      console.log('error:');
+      console.log(error.context.errors);
+      reject(error);
+    });
+  });
+};
+
+const tokenRefreshCheck = (userData) => {
   const now = new Date();
   return (now - userData.createdAt) > userData.expiresIn;
 };
@@ -273,11 +303,21 @@ const updateUser = (userId, accessToken, refreshToken, expiresIn) => {
   };
   // const newUser = new User(newUserInfo);
 
-  User.update({userId: userId}, newUserInfo, {upsert:true}, (err) => {
-    if(err) {
-      console.log('error updating user:');
-      console.log(err);
-    }
+  return new Promise((resolve, reject) => {
+    User.update(
+      {userId: userId},
+      newUserInfo,
+      {upsert:true},
+      (err) => {
+        if(err) {
+          console.log('error updating user:');
+          console.log(err);
+          reject(err);
+        }
+
+        resolve(newUserInfo);
+      }
+    );
   });
 };
 
