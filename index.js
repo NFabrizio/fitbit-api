@@ -103,6 +103,14 @@ server.route([
     handler: (request, reply) => {
       const result = User.findOne({ userId: request.params.fitbitId });
       result.exec((err, user) => {
+        if (err) {
+          return err;
+        }
+
+        if (!user) {
+          reply().redirect('/fitbit');
+        }
+
         getFitbit('/profile.json', user)
         .then((result) => {
           reply(result);
@@ -136,7 +144,8 @@ server.route([
 
         const requestDate = getFitbitDate(request.query.date);
         const requestUrl = `/activities/date/${requestDate}.json`;
-        client.get(requestUrl, user.accessToken)
+
+        getFitbit(requestUrl, user)
         .then((results) => {
           reply(results[0].summary);
         });
@@ -162,7 +171,7 @@ server.route([
         const queryString = `?afterDate=${requestDate}&sort=asc&offset=0&limit=50`;
         const requestUrl = `/activities/list.json${queryString}`;
 
-        client.get(requestUrl, user.accessToken)
+        getFitbit(requestUrl, user)
         .then((results) => {
           reply(results[0].activities);
         });
