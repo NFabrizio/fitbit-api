@@ -25,7 +25,8 @@ applicable section by clicking the link below. *These instruction are valid as o
   3. In the "Where should we fork this repository?" pop up, select your username  
     Github should create a fork of the repo in your account
 2. Clone your fork of the app
-  1. In the terminal on your local environment, navigate to the directory where you want to clone the app  
+  1. In the terminal on your local environment, navigate to the directory where  
+    you want to clone the app  
     `cd ~/path/to/your/directory`
   2. In the terminal, run:  
     `git clone [clone-url-for-your-fork]`  
@@ -36,7 +37,7 @@ applicable section by clicking the link below. *These instruction are valid as o
   `/config/config.json` relative to the root directory where you cloned the  
   fitbit-hapi-api repo.
 2. Make the file format similar to the following, but use the developer  
-  credentials provided to you by Fitbit at https://dev.fitbit.com/apps/new.
+  credentials provided to you by Fitbit at https://dev.fitbit.com/apps/new.  
     {
       "fitbit_creds": {
         "clientId": "your-fitbit-client-id",
@@ -46,13 +47,15 @@ applicable section by clicking the link below. *These instruction are valid as o
 
 ### <a name="app-start"></a>Starting the Application
 1. Install the required NPM packages
-  1. In the terminal on your local environment, navigate to the root directory where you cloned the app  
+  1. In the terminal on your local environment, navigate to the root directory  
+    where you cloned the app  
     `cd ~/path/to/your/directory`  
   2. In the terminal on your local environment, run:  
     `npm install`  
     This should install all of the required packages to run the application
 2. Start the application
-  1. In the terminal on your local environment, navigate to the root directory where you cloned the app  
+  1. In the terminal on your local environment, navigate to the root directory  
+    where you cloned the app  
     `cd ~/path/to/your/directory`  
   2. In the terminal on your local environment, run:  
     `npm start`  
