@@ -38,13 +38,14 @@ applicable section by clicking the link below. *These instruction are valid as o
   fitbit-hapi-api repo.
 2. Make the file format similar to the following, but use the developer  
   credentials provided to you by Fitbit at https://dev.fitbit.com/apps/new.
-
-      {
-        "fitbit_creds": {
-          "clientId": "your-fitbit-client-id",
-          "clientSecret": "your-fitbit-client-secret"
-        }
-      }
+  ```javascript
+  {
+    "fitbit_creds": {
+      "clientId": "your-fitbit-client-id",
+      "clientSecret": "your-fitbit-client-secret"
+    }
+  }
+  ```
 
 ### <a name="app-start"></a>Starting the Application
 1. Install the required NPM packages
