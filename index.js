@@ -230,7 +230,7 @@ server.route([
         client.delete(requestUrl, user.accessToken)
         .then((results, response) => {
           console.log(response);
-          reply(). code(204);
+          reply().code(204);
         });
       });
     }
